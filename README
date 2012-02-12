@@ -1,4 +1,4 @@
-This program is designed to solve any valid variation of the 15 puzzle game
+This program is designed to solve any valid board variation of the 15 puzzle game
 It should work on any linux system that has gcc installed (possibly other compilers as well I haven't checked)
 
 COMPILING
