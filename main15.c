@@ -33,28 +33,42 @@ int main(int argc, char **argv) {
   }
 
   while (flag==0) {
-    /*Search from start board towards goal*/
-    tsucc=expand(topen);
-    tsucc=filter(tsucc, topen);
-    tsucc=filter(tsucc, tclosed);
-    tflag1 = compare_lists(tsucc, bopen);
-    tflag2 = compare_lists(tsucc, bclosed);
-    cnt = cnt + count(tsucc);
-    if (tflag1!=1 && tflag2!=1)
-      topen=merge(topen, tclosed, tsucc);
+  #pragma omp parallel
+  {
+    #pragma omp sections
+    {
+      #pragma omp section
+      {
+        /*Search from start board towards goal*/
+        tsucc=expand(topen);
+        tsucc=filter(tsucc, topen);
+        tsucc=filter(tsucc, tclosed);
+      }
 
-    /*Search from goal board towards start*/
-    bsucc = expand(bopen);
-    bsucc = filter(bsucc, bopen);
-    bsucc = filter(bsucc, bclosed);
-    bflag1 = compare_lists(bsucc, topen);
-    bflag2 = compare_lists(bsucc, tclosed);
-    cnt = cnt + count(bsucc);
-    if (bflag1!=1 && bflag2!=1)
-      bopen=merge(bopen, bclosed, bsucc);
+      #pragma omp section
+      {
+        /*Search from goal board towards start*/
+        bsucc = expand(bopen);
+        bsucc = filter(bsucc, bopen);
+        bsucc = filter(bsucc, bclosed);
+      }
+    }
+  }
+  tflag1 = compare_lists(tsucc, bopen);
+  tflag2 = compare_lists(tsucc, bclosed);
+  cnt = cnt + count(tsucc);
+  if (tflag1!=1 && tflag2!=1)
+    topen=merge(topen, tclosed, tsucc);
 
-    flag = tflag1 | tflag2 | bflag1 | bflag2;
-    itr++;
+
+  bflag1 = compare_lists(bsucc, topen);
+  bflag2 = compare_lists(bsucc, tclosed);
+  cnt = cnt + count(bsucc);
+  if (bflag1!=1 && bflag2!=1)
+    bopen=merge(bopen, bclosed, bsucc);
+
+  flag = tflag1 | tflag2 | bflag1 | bflag2;
+  itr++;
   }
   printf("Board Solved! Iterations: %d   Nodes: %d\n", itr, cnt);
 
