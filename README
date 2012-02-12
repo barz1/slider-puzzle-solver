@@ -1,0 +1,16 @@
+This program is designed to solve any valid variation of the 15 puzzle game
+It should work on any linux system that has gcc installed (possibly other compilers as well I haven't checked)
+
+COMPILING
+gcc -std=c99 functions15.c main15.c
+
+RUNNING
+It takes as input the 15 possible board values (1-15) and 0 represents the empty space
+Example
+./a.out 1 5 2 11 4 8 12 0 7 9 3 14 6 10 13 15
+
+
+For right now this program simply solves a given puzzle, or lets you know if the given board configuration is invalid. It uses the A* heuristic approach for solving the board, a simple linear hashing mechanism for storing the boards. In addition each board is packed into a struct consisting of just 3 integers to minimize memory usage.
+
+MORE TO COME
+I have code which generates the move list taken to solve the board and a gui written in Python using gtk so the game can actually be played. Once I clean up the code some I will make it available.
