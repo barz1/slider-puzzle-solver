@@ -10,9 +10,9 @@ struct node *initialize(int argc, char **argv) {
   int arr_b[N+1][N] = {0};
 
   /*Initialize starting board*/
-  int idx=1;
-  for (int i=0; i<N; i++) {
-    for (int j=0; j<N; j++) {
+  int idx=1, i, j;
+  for (i=0; i<N; i++) {
+    for (j=0; j<N; j++) {
       arr_b[i][j] = atoi(argv[idx++]);
     }
   }
@@ -97,15 +97,15 @@ struct node *expand(struct node **list) {
 
 /*Function to expand current board into four possible successors*/
 int expand_a_node(int node[N+1][N], int succ_buf[BF][N+1][N]) {
-  int i, j, cnt, found, g_val, h_val;
+  int i, j, cnt, found, g_val, h_val, y, z;
   i = find_zero(node)/N;
   j = find_zero(node)%N;
   cnt = 0;
 
   /*Check if down move is within bounds*/
   if (i+1 < N) {
-    for (int y=0; y<N; y++) {
-      for (int z=0; z<N; z++) {
+    for (y=0; y<N; y++) {
+      for (z=0; z<N; z++) {
         succ_buf[cnt][y][z] = node[y][z];
       }
     }
@@ -116,8 +116,8 @@ int expand_a_node(int node[N+1][N], int succ_buf[BF][N+1][N]) {
 
   /*Check if right move is within bounds*/
   if (j+1 < N) {
-    for (int y=0; y<N; y++) {
-      for (int z=0; z<N; z++) {
+    for (y=0; y<N; y++) {
+      for (z=0; z<N; z++) {
         succ_buf[cnt][y][z] = node[y][z];
       }
     }
@@ -128,8 +128,8 @@ int expand_a_node(int node[N+1][N], int succ_buf[BF][N+1][N]) {
 
   /*Check if up move is within bounds*/
   if (i-1 >= 0) {
-    for (int y=0; y<N; y++) {
-      for (int z=0; z<N; z++) {
+    for (y=0; y<N; y++) {
+      for (z=0; z<N; z++) {
         succ_buf[cnt][y][z] = node[y][z];
       }
     }
@@ -140,8 +140,8 @@ int expand_a_node(int node[N+1][N], int succ_buf[BF][N+1][N]) {
 
   /*Check if left move is within bounds*/
   if (j-1 >= 0) {
-    for (int y=0; y<N; y++) {
-      for (int z=0; z<N; z++) {
+    for (y=0; y<N; y++) {
+      for (z=0; z<N; z++) {
         succ_buf[cnt][y][z] = node[y][z];
       }
     }
@@ -154,12 +154,12 @@ int expand_a_node(int node[N+1][N], int succ_buf[BF][N+1][N]) {
 }
 
 int determine_h_val(int board[N+1][N]) {
-  int goal_index, goal_i, goal_j, distance, total;
+  int goal_index, goal_i, goal_j, distance, total, i, j;
   distance=0;
 
   /*Loop to determine h value based on abs(goal_i-curr_i)+abs(goal_j-curr_h)*/
-  for (int i=0; i<N; i++) {
-    for (int j=0; j<N; j++) {
+  for (i=0; i<N; i++) {
+    for (j=0; j<N; j++) {
       if (board[i][j] == 0)
         goal_index=(N*N)-1;
       else
@@ -173,11 +173,11 @@ int determine_h_val(int board[N+1][N]) {
 }
 
 int determine_g_val(int board[N+1][N]) {
-  int start_index, start_i, start_j, distance, idx;
+  int start_index, start_i, start_j, distance, idx, i, j;
   idx=distance=0;
 
-  for (int i=0; i<N; i++) {
-    for (int j=0; j<N; j++) {
+  for (i=0; i<N; i++) {
+    for (j=0; j<N; j++) {
       start_index = find_int(board[i][j], start);
       start_i = start_index/N;
       start_j = start_index%N;
@@ -188,12 +188,12 @@ int determine_g_val(int board[N+1][N]) {
 }
 
 int determine_f_val(struct node *selected) {
-  int cur_g, cur_h, cur_bit_g, cur_bit_h, g, h, cnt;
+  int cur_g, cur_h, cur_bit_g, cur_bit_h, g, h, cnt, n;
   cnt=2;
   g = h  = 0;
 
   /*Pull g and h value out of node->c*/
-  for (int n=0; n<8; n++) {
+  for (n=0; n<8; n++) {
     cur_bit_g = (unsigned int)(selected->c>>(cnt+8))&1;
     cur_bit_h = (unsigned int)(selected->c>>cnt)&1;
     g |= (cur_bit_g<<n);
@@ -204,9 +204,9 @@ int determine_f_val(struct node *selected) {
 }
 
 int determine_move(struct node *selected) {
-  int cur_mov, cur_mov_bit;
+  int cur_mov, cur_mov_bit, n;
   cur_mov = cur_mov_bit = 0;
-  for (int n=0; n<2; n++) {
+  for (n=0; n<2; n++) {
     cur_mov_bit = (unsigned int)(selected->c>>n)&1;
     cur_mov |= (cur_mov_bit<<n);
   }
@@ -298,11 +298,11 @@ struct node **merge(struct node **hp, struct node **cp, struct node *succ) {
 /*Function to find a given integer 1-16 in board*/
 /*As of 6/2/2011 see about changing to format fo find_zero(), may not work due to where each function is called*/
 int find_int(int to_find, struct node *selected) {
-  int index=0;
+  int index=0, i, j;
   int brd[N+1][N] = {0};
   unpack_board(selected, brd);
-  for (int i=0; i<N; i++ ) {
-    for (int j=0; j<N; j++) {
+  for (i=0; i<N; i++ ) {
+    for (j=0; j<N; j++) {
       if (brd[i][j] == to_find)
         return index;
 
@@ -381,12 +381,12 @@ void print_table() {
 
 /*Function to pack a 2D array into a struct node, think about changing implementation to return type node instead of void 6/2/2011*/
 void pack_board(struct node *selected, int board[N+1][N]) {
-  int pack_a, pack_b, pack_c, cnt;
+  int pack_a, pack_b, pack_c, cnt, i, j, n;
   unsigned int cur_bit_a, cur_bit_b, cur_bit_c;
   cnt = pack_a = pack_b = pack_c = 0;
-  for(int i=0; i<2; i++) {
-    for (int j=0; j<4; j++) {
-      for(int n=0; n<4; n++) {
+  for(i=0; i<2; i++) {
+    for (j=0; j<4; j++) {
+      for(n=0; n<4; n++) {
         cur_bit_a = (unsigned int)(board[i][j]>>n)&1;
         cur_bit_b = (unsigned int)(board[i+2][j]>>n)&1;
         pack_a |= (cur_bit_a << cnt);
@@ -397,17 +397,17 @@ void pack_board(struct node *selected, int board[N+1][N]) {
   selected->a = pack_a;
   selected->b = pack_b;
   cnt=0;
-  int i=3;
+  i=3;
   /*Pack move into two bits*/
   cur_bit_c = 0;
-  for (int n=0; n<2; n++) {
+  for (n=0; n<2; n++) {
     cur_bit_c = (unsigned int)(board[N][i]>>n)&1;
     pack_c |= (cur_bit_c << cnt++);
   }
   i-=1;
   /*Pack g and h value, 8 bits each*/
   while (i>0) {
-    for (int n=0; n<8; n++){
+    for (n=0; n<8; n++){
       cur_bit_c = (unsigned int)(board[N][i]>>n)&1;
       pack_c |= (cur_bit_c << cnt++);
     }
@@ -418,17 +418,17 @@ void pack_board(struct node *selected, int board[N+1][N]) {
 
 /*Function to unpack node into 2D array, again, think about returning 2D array instead of void*/
 void unpack_board(struct node *selected, int board[N+1][N]) {
-  int cnt=0;
-  for (int i=0; i<=N; i++) {
-    for (int j=0; j<N; j++) {
+  int cnt=0, i, j, n;
+  for (i=0; i<=N; i++) {
+    for (j=0; j<N; j++) {
       board[i][j]=0;
     }
   }
   board[N][3]=0;
   int cur_bit_a, cur_bit_b, cur_bit_c;
-  for (int i=0; i<2; i++) {
-    for (int j=0; j<N; j++) {
-      for (int n=0; n<4; n++) {
+  for (i=0; i<2; i++) {
+    for (j=0; j<N; j++) {
+      for (n=0; n<4; n++) {
         cur_bit_a = (unsigned int)(selected->a>>cnt)&1;
         cur_bit_b = (unsigned int)(selected->b>>cnt)&1;
         board[i][j] |= (cur_bit_a << n);
@@ -438,16 +438,16 @@ void unpack_board(struct node *selected, int board[N+1][N]) {
     }
   }
   cnt=0;
-  int i=3;
+  i=3;
   cur_bit_c = 0;
-  for (int n=0; n<2; n++) {
+  for (n=0; n<2; n++) {
     cur_bit_c = (unsigned int)(selected->c>>n)&1;
     board[N][i] |= (cur_bit_c << n);
     cnt+=1;
   }
   i-=1;
   while (i>0) {
-    for (int n=0; n<8; n++) {
+    for (n=0; n<8; n++) {
       cur_bit_c = (unsigned int)(selected->c>>cnt)&1;
       board[N][i] |= (cur_bit_c << n);
       cnt +=1;
@@ -516,14 +516,14 @@ int count(struct node *list) {
 
 /*Function to determine if given board is solvable or not*/
 int solvable(int board[N+1][N]) {
-  int idx, inv_num;
+  int idx, inv_num, cnt, scnt;
   inv_num=0;
 
-  for (int cnt=0; cnt<N*N; cnt++) {
+  for (cnt=0; cnt<N*N; cnt++) {
     int cur_i = cnt/N;
     int cur_j = cnt%N;
     idx = (cur_i*4)+cur_j+1;    /*Set index to current index+1*/
-    for (int scnt=idx; scnt<N*N; scnt++) {
+    for (cnt=idx; scnt<N*N; scnt++) {
       int new_i = scnt/N;
       int new_j = scnt%N;
       if (board[new_i][new_j]>0 && board[cur_i][cur_j] > board[new_i][new_j])

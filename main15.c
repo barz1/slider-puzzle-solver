@@ -10,11 +10,12 @@
 
 int main(int argc, char **argv) {
   /*Check for correct input arguments*/
+  int i;
   if (argc != 17) {
     printf("Usage: %s Numbers 0 to 15\n", argv[0]);
     return 1;
   }
-  for (int i=1; i<17; i++) {
+  for (i=1; i<17; i++) {
     if (atoi(argv[i]) > 15 || atoi(argv[i]) < 0) {
       printf("Usage: %s Numbers 0 to 15\n", argv[0]);
       return 1;

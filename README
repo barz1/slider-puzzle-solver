@@ -1,14 +1,15 @@
 This program is designed to solve any valid board variation of the 15 puzzle game
 It should work on any linux system that has gcc installed (possibly other compilers as well I haven't checked)
+
 The program can also be run using multiple threads if OpenMP is installed on your system.
 I saw about a 20% decrease in runtime (Intel Core i3 4 cores) when run on multiple threads, except for boards that are solved very quickly on one thread there was not much improvement.
 
 
 COMPILING
   Single Thread
-gcc -std=c99 functions15.c main15.c
+gcc functions15.c main15.c
   Multi-threaded
-gcc -std=c99 -fopenmp functions15.c main15.c
+gcc -fopenmp functions15.c main15.c
 
 RUNNING
 It takes as input the 15 possible board values (1-15) and 0 represents the empty space
