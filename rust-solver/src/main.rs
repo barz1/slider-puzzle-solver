@@ -263,9 +263,12 @@ fn test_goal(board : &Board, goal : &Board) -> bool {
 }
 
 fn calculate_move_cost(start_board: &Board, current_board: &Board) -> i32 {
+    println!("{}, {}", (calculate_manhattan_dist(current_board)), (calculate_g_val(start_board, current_board)));
+    (3 * calculate_manhattan_dist(current_board)) + (11 * calculate_g_val(start_board, current_board))
+}
+
+fn calculate_simple_move_cost(current_board: &Board) -> i32 {
     current_board.cost + calculate_manhattan_dist(current_board)
-    //println!("{}, {}", (calculate_manhattan_dist(current_board)), (calculate_g_val(start_board, current_board)));
-    //(3 * calculate_manhattan_dist(current_board)) + (11 * calculate_g_val(start_board, current_board))
 }
 
 fn calculate_g_val(start_board: &Board, current_board: & Board) -> i32 {
@@ -309,6 +312,98 @@ fn calculate_manhattan_dist_tile(index: i32, value: u8, size: i32) -> i32 {
     let goal_col    = value as i32 % size;
 
     i32::abs(goal_row - current_row) + i32::abs(goal_col - current_col)
+}
+
+fn perform_move(board: Board, frontier: &mut BinaryHeap<HeapEntry>, explored: &mut HashSet<Board>, entry_count: &mut HashMap<i32, i32>) {
+    let children = board.expand();
+
+    explored.insert(board);
+
+    for child in children {
+
+        if !explored.contains(&child) {
+            let cost = calculate_simple_move_cost(&child);
+
+            *entry_count.entry(cost).or_insert(1) += 1;
+ 
+            if let Some(order) = entry_count.get(&cost) {
+                frontier.push(HeapEntry{ board: child, priority: cost, order: *order });
+            }
+        }
+    }
+}
+
+fn bidirectional_solver(start_board: &Board, goal_board: &Board) {
+    let start = Instant::now();
+    let mut nodes_expanded = 0;
+    let mut max_search_depth = 0;
+    let mut solved       = false;
+    let solution: Option<Board> = None;
+
+    // Frontier is board states that we know exist but haven't explored yet
+    let mut forward_frontier     = BinaryHeap::new();
+
+    // Expored is board states we have compared to goal and expanded children
+    let mut forward_explored     = HashSet::new();
+
+    // Track collision count since multiple boards may have same priority and
+    // you don't want to lose/replace boards.
+    //
+    // [P1] -> { B1, B2, B3 }
+    // [P2] -> { B1 }
+    // [P3] -> { B1, B2, B3, B4 }
+    let mut entry_count  = HashMap::new();
+
+    // Frontier is board states that we know exist but haven't explored yet
+    let mut backward_frontier     = BinaryHeap::new();
+
+    // Expored is board states we have compared to goal and expanded children
+    let mut backward_explored     = HashSet::new();
+
+    // Track collision count since multiple boards may have same priority and
+    // you don't want to lose/replace boards.
+    //
+    // [P1] -> { B1, B2, B3 }
+    // [P2] -> { B1 }
+    // [P3] -> { B1, B2, B3, B4 }
+    let mut bentry_count  = HashMap::new();
+
+    // Make of copy of board since we are going to transfer ownership to priority queue
+    let cloned_start = start_board.clone();
+    let cloned_goal = goal_board.clone();
+
+    // Give a fake priority to first board, we are going to pop it off the queue right awawy
+    entry_count.insert(0, 1);
+    forward_frontier.push(HeapEntry{ board: cloned_start, priority: 0, order: 1 });
+
+    bentry_count.insert(0, 1);
+    backward_frontier.push(HeapEntry{ board: cloned_goal, priority: 0, order: 1 });
+
+    while !solved {
+        if let Some(item) = forward_frontier.pop() {
+            perform_move(item.board, &mut forward_frontier, &mut forward_explored, &mut entry_count);
+        }
+
+        if let Some(item) = backward_frontier.pop() {
+
+        }
+    }
+
+    let duration = start.elapsed();
+
+    if let Some(solution) = solution {
+        let metrics = Metrics{
+            path: solution.m_list,
+            cost_of_path: solution.cost,
+            nodes_expanded: nodes_expanded,
+            max_search_depth: max_search_depth,
+            search_depth: solution.cost,
+            running_time: duration
+        };
+
+        println!("Solved Puzzle: {}", solved);
+        metrics.display();
+    }
 }
 
 fn solve(start_board : &Board, goal_board : &Board) {

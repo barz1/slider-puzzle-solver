@@ -153,8 +153,6 @@ class Solver {
         while (queue.data.length > 0) {
             let current = queue.pop();
 
-            console.log("Looking at board");
-            console.log(current.board);
             if (this.test_goal(current.board, goal)) {
                 console.log("Solved!");
                 solution = current.board;
@@ -170,7 +168,6 @@ class Solver {
             children.forEach((child) => {
 
                 // Use a hash of the board state to determine if this is a new board
-                console.log(child.state);
                 const child_hash = hash(child.state);
 
                 if ( !visited.has(child_hash) ) {

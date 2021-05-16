@@ -1,10 +1,9 @@
 import Tile from './Tile.js';
 import './board.css'
 import { useEffect, useState} from 'react';
-import { Button } from '@material-ui/core';
+import { Button, InputLabel, MenuItem, Select } from '@material-ui/core';
 import { Solver, Board, move_to_string} from './Solver.js';
 
-// TODO - Randomly generate board and verify it is solvable
 const generateBoard = (size) => {
     let values = [ ...Array(size*size).keys() ];
     let board  = [];
@@ -19,13 +18,12 @@ const generateBoard = (size) => {
             values.splice(random_index, 1);
         }
 
-        console.log(board);
-        solvable =  isSolvable(board, size);
-        console.log("Solvable: " + solvable);
+        solvable = isSolvable(board, size);
+
+        // If not solvable, reset the values and board and try again
         if ( !solvable ) {
-            let values = board.map(entry => entry);
-            //board = [1, 2, 3, 0, 5, 6, 4, 7, 8];
-            //solvable = true;
+            values = board.map(entry => entry);
+            board  = [];
         }
     }
 
@@ -52,19 +50,21 @@ const isSolvable = (board, size) => {
         }
     }
 
-    console.log("Inversions: " + inversions);
+    console.log("Board size: " + size + " inversions: " + inversions);
     // If odd sized board (odd number of rows/columns) then inversion must be even to be solvable
     if (size % 2 !== 0) {
         return (inversions % 2 === 0);
     }
     // For even sized boards, solvable if inversions plus row of blank square is odd
     else {
-        return ((inversions + (zero_index / size)) % 2 !== 0);
+        console.log("Solvable: " + (inversions + (zero_index / size)) %2);
+        return ((inversions + Math.floor(zero_index / size)) % 2 !== 0);
     }
 }
 
 export function Game(props) {
-    const size = 3;
+    // Default to a 3x3 board
+    const [size, setSize] = useState(3);
 
     // Track original board so 'Rest' functionality works
     const [originalBoard, setOriginalBoard] = useState(() => generateBoard(size));
@@ -109,11 +109,17 @@ export function Game(props) {
         }
     }
 
+    const updateSize = (event) => {
+        setSize(event.target.value);
+        newGame(event.target.value);
+    }
+
     // Callback when user requests a new game
-    const newGame = () => {
-        const newGame = generateBoard(size);
+    const newGame = (newSize) => {
+        const newGame = generateBoard(newSize);
         setOriginalBoard(newGame);
         setNumbers(newGame.map(entry => entry));
+        console.log("Board size: " + numbers.length);
     }
 
     // Callback when user requests to reset current game
@@ -126,7 +132,13 @@ export function Game(props) {
     // Callback for when the user requests to have the current board solved
     const solveBoard = () => {
         const start = new Board(numbers, size, 0, null);
-        const goal  = new Board([1, 2, 3, 4, 5, 6, 7, 8, 0], size, 0, null, null);
+
+        let goalState = [1, 2, 3, 4, 5, 6, 7, 8, 0];
+        if (size === 4) {
+            goalState = [1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 0];
+        }
+
+        const goal  = new Board(goalState, size, 0, null, null);
 
         const solver = new Solver();
         setSolution(solver.solve(start, goal));
@@ -178,16 +190,21 @@ export function Game(props) {
     return <div>
         <h1>{props.name}</h1>
         <div className={"board-container"}>
-            <div className={"board"}>
+            <div className={`board-${size}`}>
                 {numbers.map((value, index) => (
                     <Tile key={value} value={value} index={index} size={numbers.length} handleClick={moveTile} /> 
                 ))}
             </div>
         </div>
         <div className={"controls"}>
-            <Button variant='contained' onClick={newGame}>New Game</Button>
+            <Button variant='contained' onClick={() => newGame(size)}>New Game</Button>
             <Button variant='contained' onClick={reset}>Reset</Button>
             <Button variant='contained' onClick={solveBoard} disabled={solution !== null}>Solve</Button>
+            <label for='board-size-select'>Select Board Size</label>
+            <Select id='board-size-select' value={size} onChange={updateSize}>
+                <MenuItem value={3}>3x3</MenuItem>
+                <MenuItem value={4}>4x4</MenuItem>
+            </Select>
         </div>
     </div>
 }

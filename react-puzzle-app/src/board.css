@@ -5,10 +5,16 @@
     margin-bottom: 10px;
 }
 
-.board {
+.board-3 {
     height: 450px;
     width: 450px;
 }
+
+.board-4 {
+    height: 600px;
+    width: 600px;
+}
+
 
 .square {
     border-radius: 3;
@@ -27,4 +33,9 @@
 
 .square-move-down {
     transform: translateY(150px);
+}
+
+.controls {
+    display: flex;
+    justify-content: center;
 }
