@@ -1,10 +1,13 @@
+#![feature(map_first_last)]
+use std::collections::BTreeMap;
 use std::env;
 use std::hash::{Hash, Hasher};
 use std::cmp::Ordering;
 use std::collections::hash_map::DefaultHasher;
 use std::collections::BinaryHeap;
-use std::collections::HashMap;
-use std::collections::HashSet;
+use std::collections::{HashMap, HashSet};
+
+use std::collections::btree_map::Entry;
 use std::time::{Duration, Instant};
 
 #[derive(Copy, Clone, Debug)]
@@ -314,21 +317,57 @@ fn calculate_manhattan_dist_tile(index: i32, value: u8, size: i32) -> i32 {
     i32::abs(goal_row - current_row) + i32::abs(goal_col - current_col)
 }
 
-fn perform_move(board: Board, frontier: &mut BinaryHeap<HeapEntry>, explored: &mut HashSet<Board>, entry_count: &mut HashMap<i32, i32>) {
-    let children = board.expand();
+fn perform_move(frontier: &mut BTreeMap<i32, Vec<Board>>, explored: &mut BTreeMap<i32, Vec<Board>>) {
+    let mut children: Vec<Board> = Vec::new();
 
-    explored.insert(board);
+    // Get the next best priority board to expand
+    if let Some(mut item) = frontier.first_entry() {
 
-    for child in children {
-
-        if !explored.contains(&child) {
-            let cost = calculate_simple_move_cost(&child);
-
-            *entry_count.entry(cost).or_insert(1) += 1;
- 
-            if let Some(order) = entry_count.get(&cost) {
-                frontier.push(HeapEntry{ board: child, priority: cost, order: *order });
+        let board = item.get_mut().remove(0);
+        children  = board.expand();
+    
+        // Only keep the board which haven't been explored yet
+        children.retain(|entry| {
+            let cost = calculate_simple_move_cost(&entry);
+            if let Entry::Occupied(entries) = explored.entry(cost) {
+                for explored_board in entries.get() {
+                    if *explored_board == *entry {
+                        return true;
+                    }
+                }
             }
+            false
+        });
+
+        // Remove this priority from the queue if no more boards
+        if item.get().is_empty() {
+            item.remove_entry();
+        }
+    }
+
+    // Now iterate over remaining child boards and add to frontier if they aren't there already
+    for child in children {
+        let cost = calculate_simple_move_cost(&child);
+
+        match frontier.entry(cost) {
+            Entry::Occupied(mut entries) => {
+                let mut found_in_frontier = false;
+                for entry in entries.get() {
+                    if *entry == child {
+                        found_in_frontier = true;
+                        break;
+                    }
+                }
+    
+                if !found_in_frontier {
+                    entries.get_mut().push(child);
+                }
+            },
+    
+            // If cost (priority) is vacant, just add child board
+            Entry::Vacant(entry) => {
+                entry.insert(vec!(child));
+            },
         }
     }
 }
@@ -341,52 +380,28 @@ fn bidirectional_solver(start_board: &Board, goal_board: &Board) {
     let solution: Option<Board> = None;
 
     // Frontier is board states that we know exist but haven't explored yet
-    let mut forward_frontier     = BinaryHeap::new();
+    let mut forward_frontier:BTreeMap<i32, Vec<Board>> = BTreeMap::new();
 
     // Expored is board states we have compared to goal and expanded children
-    let mut forward_explored     = HashSet::new();
-
-    // Track collision count since multiple boards may have same priority and
-    // you don't want to lose/replace boards.
-    //
-    // [P1] -> { B1, B2, B3 }
-    // [P2] -> { B1 }
-    // [P3] -> { B1, B2, B3, B4 }
-    let mut entry_count  = HashMap::new();
+    let mut forward_explored: BTreeMap<i32, Vec<Board>> = BTreeMap::new();
 
     // Frontier is board states that we know exist but haven't explored yet
-    let mut backward_frontier     = BinaryHeap::new();
+    let mut backward_frontier:BTreeMap<i32, Vec<Board>> = BTreeMap::new();
 
     // Expored is board states we have compared to goal and expanded children
-    let mut backward_explored     = HashSet::new();
-
-    // Track collision count since multiple boards may have same priority and
-    // you don't want to lose/replace boards.
-    //
-    // [P1] -> { B1, B2, B3 }
-    // [P2] -> { B1 }
-    // [P3] -> { B1, B2, B3, B4 }
-    let mut bentry_count  = HashMap::new();
+    let mut backward_explored : BTreeMap<i32, Vec<Board>> = BTreeMap::new();
 
     // Make of copy of board since we are going to transfer ownership to priority queue
     let cloned_start = start_board.clone();
     let cloned_goal = goal_board.clone();
 
-    // Give a fake priority to first board, we are going to pop it off the queue right awawy
-    entry_count.insert(0, 1);
-    forward_frontier.push(HeapEntry{ board: cloned_start, priority: 0, order: 1 });
-
-    bentry_count.insert(0, 1);
-    backward_frontier.push(HeapEntry{ board: cloned_goal, priority: 0, order: 1 });
+    // Give a fake priority to first board, we are going to pop it off the queue right away
+    forward_frontier.insert(0, vec!(cloned_start));
+    backward_frontier.insert(0, vec!(cloned_goal));
 
     while !solved {
-        if let Some(item) = forward_frontier.pop() {
-            perform_move(item.board, &mut forward_frontier, &mut forward_explored, &mut entry_count);
-        }
-
-        if let Some(item) = backward_frontier.pop() {
-
-        }
+        perform_move(&mut forward_frontier, &mut forward_explored);
+        perform_move(&mut backward_frontier, &mut backward_explored);
     }
 
     let duration = start.elapsed();
