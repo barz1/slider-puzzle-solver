@@ -271,7 +271,8 @@ fn calculate_move_cost(start_board: &Board, current_board: &Board) -> i32 {
 }
 
 fn calculate_simple_move_cost(current_board: &Board) -> i32 {
-    current_board.cost + calculate_manhattan_dist(current_board)
+    //current_board.cost + calculate_manhattan_dist(current_board)
+    calculate_manhattan_dist(current_board)
 }
 
 fn calculate_g_val(start_board: &Board, current_board: & Board) -> i32 {
@@ -317,26 +318,83 @@ fn calculate_manhattan_dist_tile(index: i32, value: u8, size: i32) -> i32 {
     i32::abs(goal_row - current_row) + i32::abs(goal_col - current_col)
 }
 
-fn perform_move(frontier: &mut BTreeMap<i32, Vec<Board>>, explored: &mut BTreeMap<i32, Vec<Board>>) {
+fn add_entry(board: Board, board_collection: &mut BTreeMap<i32, Vec<Board>>) {
+    let cost = calculate_simple_move_cost(&board);
+    match board_collection.entry(cost) {
+        Entry::Occupied(mut entries) => {
+            let mut found = false;
+            for entry in entries.get() {
+
+                // Board already exists, don't re-add
+                if *entry == board {
+                    found = true;
+                    break;
+                }
+            }
+
+            if !found {
+                entries.get_mut().push(board);
+            }
+        },
+
+        // If cost (priority) is vacant, just add child board
+        Entry::Vacant(entry) => {
+            entry.insert(vec!(board));
+        },
+    };
+}
+
+fn check_for_solution(new_moves: &Vec<Board>, frontier: &BTreeMap<i32, Vec<Board>>, explored: &BTreeMap<i32, Vec<Board>>) -> bool {
+    for board in new_moves {
+        let cost = calculate_simple_move_cost(board);
+
+        // Look through frontier boards
+        if let Some(frontier_boards) = frontier.get(&cost) {
+            for frontier_board in frontier_boards {
+                if *board == *frontier_board {
+                    return true;
+                }
+            }
+        }
+
+        // Look through explored boards
+        if let Some(explored_boards) = explored.get(&cost) {
+            for explored_board in explored_boards {
+                if *board == *explored_board {
+                    return true;
+                }
+            }
+        }
+    }
+    return false;
+}
+
+fn perform_move(frontier: &mut BTreeMap<i32, Vec<Board>>, explored: &mut BTreeMap<i32, Vec<Board>>) -> Vec<Board> {
     let mut children: Vec<Board> = Vec::new();
 
     // Get the next best priority board to expand
     if let Some(mut item) = frontier.first_entry() {
 
         let board = item.get_mut().remove(0);
+        println!("Current board");
+        board.print();
+
         children  = board.expand();
-    
+
+        // Add board to the explored list
+        add_entry(board, explored);
+
         // Only keep the board which haven't been explored yet
         children.retain(|entry| {
             let cost = calculate_simple_move_cost(&entry);
             if let Entry::Occupied(entries) = explored.entry(cost) {
                 for explored_board in entries.get() {
                     if *explored_board == *entry {
-                        return true;
+                        return false;
                     }
                 }
             }
-            false
+            true
         });
 
         // Remove this priority from the queue if no more boards
@@ -346,38 +404,21 @@ fn perform_move(frontier: &mut BTreeMap<i32, Vec<Board>>, explored: &mut BTreeMa
     }
 
     // Now iterate over remaining child boards and add to frontier if they aren't there already
-    for child in children {
-        let cost = calculate_simple_move_cost(&child);
-
-        match frontier.entry(cost) {
-            Entry::Occupied(mut entries) => {
-                let mut found_in_frontier = false;
-                for entry in entries.get() {
-                    if *entry == child {
-                        found_in_frontier = true;
-                        break;
-                    }
-                }
-    
-                if !found_in_frontier {
-                    entries.get_mut().push(child);
-                }
-            },
-    
-            // If cost (priority) is vacant, just add child board
-            Entry::Vacant(entry) => {
-                entry.insert(vec!(child));
-            },
-        }
+    for child in &children {
+        println!("Looking at child");
+        child.print();
+        add_entry(child.clone(), frontier);
     }
+
+    children
 }
 
 fn bidirectional_solver(start_board: &Board, goal_board: &Board) {
-    let start = Instant::now();
-    let mut nodes_expanded = 0;
-    let mut max_search_depth = 0;
+    //let start = Instant::now();
+    //let mut nodes_expanded = 0;
+    //let mut max_search_depth = 0;
     let mut solved       = false;
-    let solution: Option<Board> = None;
+    //let solution: Option<Board> = None;
 
     // Frontier is board states that we know exist but haven't explored yet
     let mut forward_frontier:BTreeMap<i32, Vec<Board>> = BTreeMap::new();
@@ -400,10 +441,19 @@ fn bidirectional_solver(start_board: &Board, goal_board: &Board) {
     backward_frontier.insert(0, vec!(cloned_goal));
 
     while !solved {
-        perform_move(&mut forward_frontier, &mut forward_explored);
-        perform_move(&mut backward_frontier, &mut backward_explored);
+        let forward_moves = perform_move(&mut forward_frontier, &mut forward_explored);
+        let backward_moves = perform_move(&mut backward_frontier, &mut backward_explored);
+
+        let forward_found = check_for_solution(&forward_moves, &backward_frontier, &backward_explored);
+        let backward_found = check_for_solution(&backward_moves, &forward_frontier, &forward_explored);
+
+        solved = forward_found || backward_found;
+        if solved {
+            println!("Found solution!");
+        }
     }
 
+    /* 
     let duration = start.elapsed();
 
     if let Some(solution) = solution {
@@ -419,6 +469,7 @@ fn bidirectional_solver(start_board: &Board, goal_board: &Board) {
         println!("Solved Puzzle: {}", solved);
         metrics.display();
     }
+    */
 }
 
 fn solve(start_board : &Board, goal_board : &Board) {
@@ -526,9 +577,9 @@ fn main() {
         cost: 0
     };
 
-    if !is_solvable(&start) {
-        panic!("Board is not solvable, try another one!");
-    }
+    //if !is_solvable(&start) {
+    //    panic!("Board is not solvable, try another one!");
+    //}
 
     let goal = Board {
         size: 4,
@@ -538,7 +589,8 @@ fn main() {
     };
 
     start.print();
-    solve(&start, &goal);
+    //solve(&start, &goal);
+    bidirectional_solver(&start, &goal);
     //solve(&goal, &start);
 
     /*
