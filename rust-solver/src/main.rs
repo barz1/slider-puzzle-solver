@@ -76,6 +76,10 @@ struct Board {
     m_list: Vec<Move>,
 
     cost: i32,
+
+    gval: i32,
+
+    hval: i32,
 }
 
 impl Clone for Board {
@@ -85,6 +89,8 @@ impl Clone for Board {
             state: self.state.clone(),
             m_list: self.m_list.clone(),
             cost:  self.cost,
+            gval: self.gval,
+            hval: self.hval
         }
     }
 }
@@ -226,7 +232,8 @@ impl Board {
             }
             println!();
         }
-        println!();
+        println!("0 {} {} 0\n", self.gval, self.hval);
+        //println!();
     }
 }
 
@@ -265,9 +272,19 @@ fn test_goal(board : &Board, goal : &Board) -> bool {
     board.state == goal.state
 }
 
-fn calculate_move_cost(start_board: &Board, current_board: &Board) -> i32 {
-    println!("{}, {}", (calculate_manhattan_dist(current_board)), (calculate_g_val(start_board, current_board)));
-    (3 * calculate_manhattan_dist(current_board)) + (11 * calculate_g_val(start_board, current_board))
+fn calculate_f_val(board: &Board) -> i32 {
+    calculate_f_val_prim(board.gval, board.hval)
+}
+
+fn calculate_f_val_prim(gval: i32, hval: i32) -> i32 {
+    (11 * gval) + (3 * hval)
+}
+
+fn calculate_move_cost(start_board: &Board, current_board: &Board) -> (i32, i32, i32) {
+    let hval = calculate_manhattan_dist(&current_board);
+    let gval = calculate_g_val(&start_board, &current_board);
+
+    (gval, hval, calculate_f_val_prim(gval, hval))
 }
 
 fn calculate_simple_move_cost(current_board: &Board) -> i32 {
@@ -318,8 +335,26 @@ fn calculate_manhattan_dist_tile(index: i32, value: u8, size: i32) -> i32 {
     i32::abs(goal_row - current_row) + i32::abs(goal_col - current_col)
 }
 
+/*
+fn get_entry(board: &Board, collection: &mut BTreeMap<i32, Vec<Board>>) -> Option<Board> {
+
+    let parent = board.clone();
+    match (parent.m)
+    let cost = calculate_f_val(board);
+
+    if let Entry::Occupied(entries) = collection.entry(cost) {
+        for entry in entries.get() {
+            if *entry == *board {
+                return Some(entry.clone());
+            }
+        }
+    }
+    None
+}
+*/
+
 fn add_entry(board: Board, board_collection: &mut BTreeMap<i32, Vec<Board>>) {
-    let cost = calculate_simple_move_cost(&board);
+    let cost = calculate_f_val(&board);
     match board_collection.entry(cost) {
         Entry::Occupied(mut entries) => {
             let mut found = false;
@@ -342,13 +377,15 @@ fn add_entry(board: Board, board_collection: &mut BTreeMap<i32, Vec<Board>>) {
             entry.insert(vec!(board));
         },
     };
+
 }
 
-fn check_for_solution(new_moves: &Vec<Board>, frontier: &BTreeMap<i32, Vec<Board>>, explored: &BTreeMap<i32, Vec<Board>>) -> bool {
+fn check_for_solution(new_moves: &Vec<Board>, frontier: &BTreeMap<i32, Vec<Board>>, explored: &BTreeMap<i32, Vec<Board>>) -> Option<(Vec<Move>, Vec<Move>)> {
     for board in new_moves {
-        let cost = calculate_simple_move_cost(board);
+        let cost = calculate_f_val(board);
 
         // Look through frontier boards
+        /*
         if let Some(frontier_boards) = frontier.get(&cost) {
             for frontier_board in frontier_boards {
                 if *board == *frontier_board {
@@ -356,28 +393,28 @@ fn check_for_solution(new_moves: &Vec<Board>, frontier: &BTreeMap<i32, Vec<Board
                 }
             }
         }
+        */
 
         // Look through explored boards
         if let Some(explored_boards) = explored.get(&cost) {
             for explored_board in explored_boards {
                 if *board == *explored_board {
-                    return true;
+                    return Some((board.m_list.clone(), explored_board.m_list.clone()));
                 }
             }
         }
     }
-    return false;
+    None
 }
 
-fn perform_move(frontier: &mut BTreeMap<i32, Vec<Board>>, explored: &mut BTreeMap<i32, Vec<Board>>) -> Vec<Board> {
+fn perform_move(frontier: &mut BTreeMap<i32, Vec<Board>>, explored: &mut BTreeMap<i32, Vec<Board>>, start_board: &Board) -> Vec<Board> {
     let mut children: Vec<Board> = Vec::new();
 
     // Get the next best priority board to expand
     if let Some(mut item) = frontier.first_entry() {
 
         let board = item.get_mut().remove(0);
-        println!("Current board");
-        board.print();
+        //board.print();
 
         children  = board.expand();
 
@@ -386,8 +423,9 @@ fn perform_move(frontier: &mut BTreeMap<i32, Vec<Board>>, explored: &mut BTreeMa
 
         // Only keep the board which haven't been explored yet
         children.retain(|entry| {
-            let cost = calculate_simple_move_cost(&entry);
-            if let Entry::Occupied(entries) = explored.entry(cost) {
+            let cost = calculate_move_cost(&start_board, &entry);
+
+            if let Entry::Occupied(entries) = explored.entry(cost.2) {
                 for explored_board in entries.get() {
                     if *explored_board == *entry {
                         return false;
@@ -404,9 +442,10 @@ fn perform_move(frontier: &mut BTreeMap<i32, Vec<Board>>, explored: &mut BTreeMa
     }
 
     // Now iterate over remaining child boards and add to frontier if they aren't there already
-    for child in &children {
-        println!("Looking at child");
-        child.print();
+    for child in &mut children {
+        let cost = calculate_move_cost(&start_board, &child);
+        child.gval = cost.0;
+        child.hval = cost.1;
         add_entry(child.clone(), frontier);
     }
 
@@ -414,10 +453,11 @@ fn perform_move(frontier: &mut BTreeMap<i32, Vec<Board>>, explored: &mut BTreeMa
 }
 
 fn bidirectional_solver(start_board: &Board, goal_board: &Board) {
-    //let start = Instant::now();
-    //let mut nodes_expanded = 0;
+    let start = Instant::now();
+    let mut nodes_expanded = 0;
+    let mut solution : Vec<Move> = Vec::new();
+
     //let mut max_search_depth = 0;
-    let mut solved       = false;
     //let solution: Option<Board> = None;
 
     // Frontier is board states that we know exist but haven't explored yet
@@ -440,22 +480,61 @@ fn bidirectional_solver(start_board: &Board, goal_board: &Board) {
     forward_frontier.insert(0, vec!(cloned_start));
     backward_frontier.insert(0, vec!(cloned_goal));
 
-    while !solved {
-        let forward_moves = perform_move(&mut forward_frontier, &mut forward_explored);
-        let backward_moves = perform_move(&mut backward_frontier, &mut backward_explored);
+    let mut forward_found = false;
+    let mut backward_found = false;
 
-        let forward_found = check_for_solution(&forward_moves, &backward_frontier, &backward_explored);
-        let backward_found = check_for_solution(&backward_moves, &forward_frontier, &forward_explored);
+    while !forward_found && !backward_found {
+        let forward_moves = perform_move(&mut forward_frontier, &mut forward_explored, &start_board);
+        let backward_moves = perform_move(&mut backward_frontier, &mut backward_explored, &start_board);
 
-        solved = forward_found || backward_found;
-        if solved {
-            println!("Found solution!");
+        nodes_expanded = nodes_expanded + forward_moves.len() + backward_moves.len();
+
+        let forward_solution = check_for_solution(&forward_moves, &backward_frontier, &backward_explored);
+        if let Some(moves) = forward_solution {
+            println!("Found forward solution");
+            forward_found = true;
+
+            //println!("{:?}  {:?}", moves.0, moves.1);
+
+            solution = moves.0;
+
+            let mut rest = moves.1.clone();
+            rest.reverse();
+            for backward_move in rest {
+                match backward_move {
+                    Move::Down => solution.push(Move::Up),
+                    Move::Up => solution.push(Move::Down),
+                    Move::Right => solution.push(Move::Left),
+                    Move::Left => solution.push(Move::Right)
+                }
+            }
+        }
+
+        let backward_solution = check_for_solution(&backward_moves, &forward_frontier, &forward_explored);
+        if let Some(moves) = backward_solution {
+            println!("Found backward solution");
+            backward_found = true;
+
+            solution = moves.1;
+
+            let mut rest = moves.0.clone();
+            rest.reverse();
+            for backward_move in rest {
+                match backward_move {
+                    Move::Down => solution.push(Move::Up),
+                    Move::Up => solution.push(Move::Down),
+                    Move::Right => solution.push(Move::Left),
+                    Move::Left => solution.push(Move::Right)
+                }
+            }
         }
     }
 
-    /* 
     let duration = start.elapsed();
+    println!("Solution found, duration: {:?}, nodes: {}", duration, nodes_expanded);
+    println!("{:?}", solution);
 
+    /* 
     if let Some(solution) = solution {
         let metrics = Metrics{
             path: solution.m_list,
@@ -491,9 +570,6 @@ fn solve(start_board : &Board, goal_board : &Board) {
         if let Some(item) = frontier.pop() {
             solved = test_goal(&item.board, goal_board);
 
-            //println!("Looking at board on iteration: {}", nodes_expanded);
-            //item.board.print();
-
             if solved { 
                 solution = Some(item.board);
                 break;
@@ -503,21 +579,21 @@ fn solve(start_board : &Board, goal_board : &Board) {
             explored.insert(key);
 
             let children = item.board.expand();
-            for child in children {
+            for mut child in children {
 
                 let val = calculate_hash(&child);
                 if !explored.contains(&val) {
                     //println!("Looking at child");
                     //child.print();
 
-                    let cost = calculate_move_cost(start_board, &child);
+                    let cost = calculate_move_cost(start_board, &mut child);
                     let key  = calculate_hash(&child);
                     max_search_depth = std::cmp::max(max_search_depth, child.cost);
 
-                    *entry_count.entry(cost).or_insert(1) += 1;
+                    *entry_count.entry(cost.2).or_insert(1) += 1;
 
-                    if let Some(order) = entry_count.get(&cost) {
-                        frontier.push(HeapEntry{ board: child, priority: cost, order: *order });
+                    if let Some(order) = entry_count.get(&cost.2) {
+                        frontier.push(HeapEntry{ board: child, priority: cost.2, order: *order });
                         explored.insert(key);
                     }
                 }
@@ -570,25 +646,35 @@ fn main() {
     let state = parse_args(&args);
     let end : [u8; 16] = [1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 0];
 
-    let start = Board {
+    let mut start = Board {
         size: 4,
         state: state,
         m_list: Vec::new(),
-        cost: 0
+        cost: 0,
+        gval: 0,
+        hval: 0,
     };
+    let cost = calculate_move_cost(&start, &start);
+    start.gval = cost.0;
+    start.hval = cost.1;
 
     //if !is_solvable(&start) {
     //    panic!("Board is not solvable, try another one!");
     //}
 
-    let goal = Board {
+    let mut goal = Board {
         size: 4,
         state: end,
         m_list: Vec::new(),
-        cost: 0
+        cost: 0,
+        gval: 0,
+        hval: 0
     };
+    let cost = calculate_move_cost(&start, &goal);
+    goal.gval = cost.0;
+    goal.hval = cost.1;
 
-    start.print();
+    //start.print();
     //solve(&start, &goal);
     bidirectional_solver(&start, &goal);
     //solve(&goal, &start);
