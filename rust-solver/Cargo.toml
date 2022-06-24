@@ -4,7 +4,13 @@ version = "0.1.0"
 authors = ["mbarszcz"]
 edition = "2018"
 
-# See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
+[lib]
+name = "slider_solver_lib"
+path = "src/lib.rs"
+
+[[bin]]
+name = "slider_solver"
+path = "src/main.rs"
 
 [dependencies]
 priority-queue = "1.0.5"

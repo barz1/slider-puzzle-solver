@@ -1,6 +1,9 @@
 /*Author: Michael Barszcz
 * Copyright Spring 2011
 * This program solves a given board of the 15 puzzle as long as it is a valid board*/
+#ifndef SLIDER_FUNCTION_H
+#define SLIDER_FUNCTION_H
+
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
@@ -29,3 +32,5 @@ void unpack_board(), pack_board();
 void print_table();
 int find_zero(), find_int(), count();
 void remove_node();
+
+#endif
