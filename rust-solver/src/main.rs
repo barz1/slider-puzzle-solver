@@ -1,4 +1,5 @@
 use std::env;
+use std::time::Instant;
 
 use slider_solver_lib::{Board, bidirectional_solver};
 
@@ -116,6 +117,7 @@ fn main() {
     let state = parse_args(&args);
     let end : [u8; 16] = [1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 0];
 
+
     let start = Board {
         size: 4,
         state: state,
@@ -133,13 +135,21 @@ fn main() {
         score: 0
     };
 
-    start.print();
-    println!();
-    goal.print();
+    //start.print();
+    //println!();
+    //goal.print();
 
     if !start.is_solvable() {
         panic!("Board is not solvable, try another one!");
     }
 
-    bidirectional_solver(&start, &goal);
+    let start_time = Instant::now();
+
+    let solution = bidirectional_solver(&start, &goal);
+
+    let duration = start_time.elapsed();
+    start.print_flat();
+    println!(", {:?}, {:?}", duration, solution);
+
+
 }

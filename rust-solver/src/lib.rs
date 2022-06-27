@@ -1,7 +1,7 @@
 #![feature(map_first_last)]
 use std::collections::BTreeMap;
 use std::collections::btree_map::Entry;
-use std::time::{Duration, Instant};
+//use std::time::{Duration, Instant};
 
 mod heuristics;
 use self::heuristics::Heuristic;
@@ -59,6 +59,11 @@ fn add_entry(board: Board, board_collection: &mut BTreeMap<i32, Vec<Board>>) {
 
 fn check_for_solution(new_moves: &Vec<Board>, frontier: &BTreeMap<i32, Vec<Board>>, explored: &BTreeMap<i32, Vec<Board>>) -> Option<(Vec<Move>, Vec<Move>)> {
     for board in new_moves {
+        let mut native_state : [u8; 16] = [0; 16];
+        for ii in 0..16 as i32 {
+            native_state[ii as usize] = 0;
+
+        }
 
         // Look through frontier boards
         if let Some(frontier_boards) = frontier.get(&board.score) {
@@ -121,8 +126,8 @@ fn perform_move(frontier: &mut BTreeMap<i32, Vec<Board>>, explored: &mut BTreeMa
     children
 }
 
-pub fn bidirectional_solver(start_board: &Board, goal_board: &Board) {
-    let start = Instant::now();
+pub fn bidirectional_solver(start_board: &Board, goal_board: &Board) -> Vec<Move> {
+    //let start = Instant::now();
     let mut nodes_expanded = 0;
     let mut solution : Vec<Move> = Vec::new();
 
@@ -163,7 +168,6 @@ pub fn bidirectional_solver(start_board: &Board, goal_board: &Board) {
 
         let forward_solution = check_for_solution(&forward_moves, &backward_frontier, &backward_explored);
         if let Some(moves) = forward_solution {
-            println!("Found forward solution");
             forward_found = true;
 
             //println!("{:?}  {:?}", moves.0, moves.1);
@@ -185,7 +189,6 @@ pub fn bidirectional_solver(start_board: &Board, goal_board: &Board) {
 
         let backward_solution = check_for_solution(&backward_moves, &forward_frontier, &forward_explored);
         if let Some(moves) = backward_solution {
-            println!("Found backward solution");
             backward_found = true;
 
             solution = moves.1;
@@ -204,9 +207,9 @@ pub fn bidirectional_solver(start_board: &Board, goal_board: &Board) {
         }
     }
 
-    let duration = start.elapsed();
-    println!("Solution found, duration: {:?}, nodes: {}", duration, nodes_expanded);
-    println!("{:?}", solution);
+
+    //let duration = start.elapsed();
+    //println!("Solution found, duration: {:?}, nodes: {}", duration, nodes_expanded);
 
     /* 
     if let Some(solution) = solution {
@@ -223,5 +226,8 @@ pub fn bidirectional_solver(start_board: &Board, goal_board: &Board) {
         metrics.display();
     }
     */
+
+    solution
+
 }
 

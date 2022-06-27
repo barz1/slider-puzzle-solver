@@ -11,6 +11,13 @@ gcc functions15.c main15.c
   Multi-threaded
 gcc -fopenmp functions15.c main15.c
 
+NOTE - GCC 10 and above, -fno-common is now default, revert to -fcommon
+  Single Thread
+gcc -fcommon functions15.c main15.c
+  Multi-threaded
+gcc -fcommon -fopenmp functions15.c main15.c
+
+
 RUNNING
 It takes as input the 15 possible board values (1-15) and 0 represents the empty space
 Example

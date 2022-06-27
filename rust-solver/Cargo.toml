@@ -14,3 +14,4 @@ path = "src/main.rs"
 
 [dependencies]
 priority-queue = "1.0.5"
+rand = "0.8.4"

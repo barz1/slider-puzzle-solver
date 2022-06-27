@@ -6,14 +6,14 @@ import { Solver, GameBoard } from './Solver.js';
 
 
 export function Game(props) {
-    // Default to a 3x3 board
-    const [size, setSize] = useState(3);
+    // Default to a 4x4 board
+    const [size, setSize] = useState(4);
 
     // Handler for the wasm functions
     const [backend, setBackend] = useState(null);
 
     // Track original board so 'Reset' functionality works
-    const [originalBoard, setOriginalBoard] = useState([1,2,3,4,5,6,7,8,9,0]);
+    const [originalBoard, setOriginalBoard] = useState([1,2,3,4,5,6,7,8,9,10,11,12,13,14,15,0]);
 
     // Track current board
     const [numbers, setNumbers]   = useState([]);
@@ -64,8 +64,8 @@ export function Game(props) {
 
     // Callback when user requests a new game
     const newGame = (newSize) => {
-        const board = backend.Board.generate_board(newSize);
-        const state = Array.from(board.get_state());
+        const board = backend.generate(4);
+        const state = Array.from(board);
         setSize(newSize);
         setOriginalBoard(board);
         setSolution(null);
@@ -90,23 +90,33 @@ export function Game(props) {
         }
 
         const goal  = new GameBoard(goalState, size, 0, null, null);
-        console.log(originalBoard.render());
-
-        backend.bidirectional_solver(originalBoard);
-
         const solver = new Solver();
-        setSolution(solver.solve(start, goal));
+        //console.log(originalBoard.render());
+
+        console.time("solver");
+
+        // Rust Solver
+        let solution = backend.solve(originalBoard);
+        setSolution(solution);
+
+        // Javascript Solver
+        //setSolution(solver.solve(start, goal));
+
+        console.timeEnd("solver");
     }
 
     // Make this call on initial load to load the wasm module
     useEffect(() => {
 
         async function load_wasm() {
-            let module = await import('wasm-test');
+            let module = await import('slider-solver-wasm');
             setBackend(module);
 
-            const board = module.Board.generate_board(size);
-            const state = Array.from(board.get_state());
+            //const board = [1,2,3,4,5,6,7,8,9,10,11,12,0,13,14,15]
+            //const board = [11, 15, 3, 12, 2, 8, 10, 1, 4, 6, 5, 14, 13, 7, 9, 0]
+            //const board = [8, 5, 14, 15, 10, 3, 11, 1, 4, 2, 9, 6, 13, 12, 7, 0];
+            const board = [15, 13, 12, 5, 0, 9, 14, 10, 3, 7, 6, 8, 2, 1, 11, 4];
+            const state = Array.from(board);
             setOriginalBoard(board);
             setNumbers(state.map(entry => entry));
         };
@@ -153,7 +163,7 @@ export function Game(props) {
 
             return () => clearTimeout(timer);
         }
-    }, [numbers, solution, solMove]);
+    }, [numbers, solution, solMove, size]);
 
 
     return <div>
@@ -169,11 +179,13 @@ export function Game(props) {
             <Button variant='contained' onClick={() => newGame(size)}>New Game</Button>
             <Button variant='contained' onClick={reset}>Reset</Button>
             <Button variant='contained' onClick={solveBoard} disabled={solution !== null}>Solve</Button>
+            { /*
             <label htmlFor='board-size-select'>Select Board Size</label>
             <Select id='board-size-select' value={size} onChange={updateSize}>
                 <MenuItem value={3}>3x3</MenuItem>
                 <MenuItem value={4}>4x4</MenuItem>
             </Select>
+                */ }
         </div>
     </div>
 }

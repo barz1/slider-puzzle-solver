@@ -1,4 +1,6 @@
 use std::hash::{Hash, Hasher};
+use rand::thread_rng;
+use rand::seq::SliceRandom;
 
 #[derive(Copy, Clone, Debug, PartialEq, Eq)]
 pub enum Move {
@@ -126,6 +128,26 @@ impl Board {
         index
     }
 
+    pub fn generate_board(size: usize) -> Board {
+        let mut solvable = false;
+        let mut values : Vec<u8> = (0..size*size).map(|x| x as u8).collect();
+
+        while !solvable {
+            values.shuffle(&mut thread_rng());
+
+            let state = Board::vec_to_array(&values);
+            solvable = Board::is_solvable_arr(state, size);
+        }
+
+        Board {
+            size,
+            state: Board::vec_to_array(&values),
+            m_list: Vec::new(),
+            cost : 0,
+            score: 0
+        }
+    }
+
     pub fn print(&self) {
         println!("Printing board");
         for row in 0..self.size {
@@ -136,6 +158,14 @@ impl Board {
         }
         //println!("0 {} {} 0\n", self.gval, self.hval);
         //println!();
+    }
+
+    pub fn print_flat(&self) {
+        for row in 0..self.size {
+            for col in 0..self.size {
+                print!("{} ", self.state[row*self.size+col]);
+            }
+        }
     }
 }
 
@@ -215,6 +245,45 @@ impl Board {
         board.cost += 1;
         board.m_list.push(Move::Down);
         Some(board)
+    }
+
+    fn is_solvable_arr(state: [u8;16], row_size: usize) -> bool {
+        let mut inversions = 0;
+        let mut zero_row = 0;
+
+        for index in 0..row_size*row_size {
+
+            let current = state[index];
+            if current == 0 {
+                zero_row = index / row_size;
+                continue;
+            }
+
+            for nindex in index+1..row_size*row_size {
+                if state[nindex] != 0 && current > state[nindex] {
+                    inversions += 1;
+                }
+            }
+        }
+
+        // For odd size boards (ex. 3x3) number of inversions must be even
+        if row_size % 2 != 0 {
+            return inversions % 2 == 0;
+        }
+
+        // For even size boards (ex. 4x4) number of inversions + row of blank square must be odd
+        (inversions + zero_row) % 2 != 0
+    }
+
+    fn vec_to_array(vector : &Vec<u8>) -> [u8;16] {
+        let mut array : [u8;16] = [0;16];
+
+        let mut ii : usize = 0;
+        for entry in vector {
+            array[ii] = *entry;
+            ii += 1;
+        }
+        array
     }
 
 }
